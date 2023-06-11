@@ -195,11 +195,27 @@ void render8x8(uint8_t * chrgen, uint16_t x, uint8_t y, uint8_t scale, uint8_t f
 }
 
 /**
+ * renderStr(string etc)
+ * 
+ * Render a null (0x00) terminated string using specified font at x,y in fg,bg colours.
+ * As far as this code is concerned the *font must point to the start of the code for ASCII 32 ie a space.
+*/
+void renderStr(uint8_t * str, uint8_t * font, uint16_t x, uint8_t y, uint8_t scale, uint8_t fg, uint8_t bg) {
+    while(*str) { // OMG no error checking - the sky is falling....
+        render8x8(&font[(*str-32)*8], x, y, scale, fg, bg);
+        x+=8;
+        str++;
+    }
+}
+
+/**
  * drawLayout()
  * 
  * Draw the borders around the different screen areas, static text etc.
 */
 void drawLayout() {
+    uint8_t i,j,k;
+
     gcls(BGCOL);
 
     // Outside border
@@ -209,18 +225,37 @@ void drawLayout() {
     fastline(LB,TB,RB,TB,FGCOL); // horizontal line at top
     fastline(LB,BB,RB,BB,FGCOL); // horizontal line at bottom
 
-    render8x8(&console_font_8x8[40], 10, 10, 1, 1,7);
-    render8x8(&console_font_8x8[48], 20, 10, 1, 2,7);
-    render8x8(&console_font_8x8[56], 30, 10, 1, 3,7);
-    render8x8(&console_font_8x8[64], 40, 10, 1, 4,7);
-    render8x8(&console_font_8x8[72], 50, 10, 1, 5,7);
-    render8x8(&console_font_8x8[80], 60, 10, 1, 6,7);
-    render8x8(&console_font_8x8[88], 70, 10, 1, 8,7);
-    render8x8(&console_font_8x8[96], 80, 10, 1, 9,7);
-    render8x8(&console_font_8x8[104], 90, 10, 1, 10,7);
-    render8x8(&console_font_8x8[112], 100, 10, 1, 11,7);
-    render8x8(&console_font_8x8[120], 110, 10, 1, 12,7);
-    render8x8(&console_font_8x8[128], 120, 10, 1, 13,7);
+    renderStr("SPRITE EDITOR BY I.MEINS - JUNE 23", console_font_8x8, 28, 4, 1, 3, 1);
+
+    // Draw a 32x32 editor area
+    // eg 32 * 5 wide
+
+    #define PEDX 8
+    #define PEDY 20
+    #define PEDPW 5
+    #define PEDPH 5
+    #define PEDGAP 1
+    #define PIXW 32
+    #define PIXH 32
+    #define PBOXW (PIXW * PEDPW) + ((PIXW-1) * PEDGAP) + (2*PEDGAP)
+    #define PBOXH (PIXH * PEDPH) + ((PIXH-1) * PEDGAP) + (2*PEDGAP)
+
+    // bordering box
+    fastline(PEDX, PEDY, PEDX+PBOXW, PEDY, FGCOL);
+    fastline(PEDX, PEDY, PEDX, PEDY+PBOXH, FGCOL);
+
+    fastline(PEDX, PEDY+PBOXH, PEDX+PBOXW, PEDY+PBOXH, FGCOL);
+    fastline(PEDX+PBOXW, PEDY, PEDX+PBOXW, PEDY+PBOXH, FGCOL);
+
+    // Draw the pixels in the edit area
+
+    for (j=0; j<PIXH; j++) { // the rows
+        for (k=0; k<PIXW; k++) { // the columns
+            setxyc(PEDX+1+PEDGAP+(k * PEDPW)+(k * PEDGAP), PEDY+1+PEDGAP+(j * PEDPH)+(j * PEDGAP), 1);
+        }
+    }
+
+    //render8x8(&console_font_8x8[40], 10, 10, 1, 1,7);
 }
 
 void main()
