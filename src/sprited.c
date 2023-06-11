@@ -104,10 +104,10 @@ void setxyc(uint16_t x, uint8_t y, int8_t c) {
 }
 
 /**
- * line(x,y,x1,y1,c) 
+ * fastline(x,y,x1,y1,c) 
  * Draws a (straight h or v only at the moment) in the specified colour. 
 */
-void line(uint16_t x0, uint8_t y0, uint16_t x1, uint8_t y1, uint8_t c) {
+void fastline(uint16_t x0, uint8_t y0, uint16_t x1, uint8_t y1, uint8_t c) {
     uint8_t rightpix = 0; // 1 if right pixel else 0 for left pixel
     uint8_t pair = 0;
 
@@ -158,7 +158,44 @@ void line(uint16_t x0, uint8_t y0, uint16_t x1, uint8_t y1, uint8_t c) {
 }
 
 /**
- * drawLaout()
+ * render8x8(uint8_t *chargen, x, y, scale, fg, bg)
+ *
+ * Render an 8x8 pixel bitmap from memory to the screen with the top left
+ * at x,y in single colours for foreground and background. Ie for text stuff.
+ * Scale the pixels as per scale (1,2,3 etc.)
+ * To say render a H you would have this in the *chargen array
+ * 0b01000010,
+ * 0b01000010,
+ * 0b01000010,
+ * 0b01111110,
+ * 0b01000010,
+ * 0b01000010,
+ * 0b01000010,
+ * 0b00000000
+ * 
+ * First version in slow mode calling setxyc()
+*/
+void render8x8(uint8_t * chrgen, uint16_t x, uint8_t y, uint8_t scale, uint8_t fg, uint8_t bg) {
+    #define CH 8
+    #define CW 8
+
+    uint8_t height = CH, width = CW;
+    uint16_t xtemp = x;
+
+    for (height=CH; height>0; height--) { // each line
+        xtemp = x; // left most pixel each line
+        for (width=CW; width>0; width--) { // each pixel across
+            if ((chrgen[8-height] & (1<<width-1)) == 0) // bit is bg colour
+                setxyc(xtemp++,y,bg);
+            else
+                setxyc(xtemp++,y,fg);
+        }
+        y++; // next line
+    }
+}
+
+/**
+ * drawLayout()
  * 
  * Draw the borders around the different screen areas, static text etc.
 */
@@ -166,12 +203,24 @@ void drawLayout() {
     gcls(BGCOL);
 
     // Outside border
-    line(LB,TB,LB,BB,FGCOL); // vertical line at right
-    line(RB,TB,RB,BB,FGCOL); // Vertical line at left
+    fastline(LB,TB,LB,BB,FGCOL); // vertical line at right
+    fastline(RB,TB,RB,BB,FGCOL); // Vertical line at left
 
-    line(LB,TB,RB,TB,FGCOL); // horizontal line at top
-    line(LB,BB,RB,BB,FGCOL); // horizontal line at bottom
+    fastline(LB,TB,RB,TB,FGCOL); // horizontal line at top
+    fastline(LB,BB,RB,BB,FGCOL); // horizontal line at bottom
 
+    render8x8(&console_font_8x8[40], 10, 10, 1, 1,7);
+    render8x8(&console_font_8x8[48], 20, 10, 1, 2,7);
+    render8x8(&console_font_8x8[56], 30, 10, 1, 3,7);
+    render8x8(&console_font_8x8[64], 40, 10, 1, 4,7);
+    render8x8(&console_font_8x8[72], 50, 10, 1, 5,7);
+    render8x8(&console_font_8x8[80], 60, 10, 1, 6,7);
+    render8x8(&console_font_8x8[88], 70, 10, 1, 8,7);
+    render8x8(&console_font_8x8[96], 80, 10, 1, 9,7);
+    render8x8(&console_font_8x8[104], 90, 10, 1, 10,7);
+    render8x8(&console_font_8x8[112], 100, 10, 1, 11,7);
+    render8x8(&console_font_8x8[120], 110, 10, 1, 12,7);
+    render8x8(&console_font_8x8[128], 120, 10, 1, 13,7);
 }
 
 void main()
