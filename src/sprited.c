@@ -8,6 +8,7 @@
 */
 #include <rp6502.h>
 #include <stdio.h>
+#include <stdlib.h>
 #include "font8x8.h" // covers from ASCII 32 to 95 inclusive.
 
 #define WIDTH 320
@@ -208,6 +209,69 @@ void renderStr(uint8_t * str, uint8_t * font, uint16_t x, uint8_t y, uint8_t sca
     }
 }
 
+void renderInt(uint16_t x, uint8_t y, uint16_t v, uint8_t fg, uint8_t bg) {
+    uint8_t s[] = {0x00,0x00,0x00,0x00,0x00,0x00,0x00};
+    itoa(v, s, 10);
+    renderStr(s, console_font_8x8, x, y, 1, 7, 0);
+}
+
+/**
+ * fbox(x,y,w,h,c)
+ * 
+ * Draw a filled box at x,y with w,h etc. Use writes to vram for quickernesses
+ * Note the max w,h is limited by the uint8_t to 255.
+*/
+void fbox(uint16_t x, uint8_t y, uint8_t w, uint8_t h, uint8_t fg, uint8_t bg) {
+    uint8_t i,j,k; // Old Fortran programmers salivate...
+
+    // probably want to start by working out if we start on a full byte.
+
+    if ((x & 1) == 1) { // starting on right pixel so half byte
+        //renderStr("HALF AT START",console_font_8x8,200,62,1,7,0);
+        // handle half byte
+        RIA_ADDR0 = (y * 160) + (x >> 1); // figure out the starting address
+        RIA_STEP0 = 0; // Can't use 160 so add it manually
+        i = (fg << 4) + bg; // colour and bg to set
+
+        for (j=0; j<h; j++) {
+            RIA_RW0 = i;
+            RIA_ADDR0 += 160;
+        }
+
+        x++; // Reduce the work left to do (whole byte pairs)
+        w--; 
+    }
+
+    // and if we end on a half byte
+    if ((x+w) & 1 == 1) { // finishing on left pixel so half byte
+        //renderStr("HALF AT END",console_font_8x8,200,70,1,7,0);
+        // handle half byte
+        RIA_ADDR0 = (y * 160) + ((x+w-1) >> 1); // figure out the starting address
+        RIA_STEP0 = 0;
+        i = (bg << 4) + fg; // colour and bg to set
+
+        for (j=0; j<h; j++) {
+            RIA_RW0 = i;
+            RIA_ADDR0 += 160;
+        }
+
+        w--; // Reduce the work left to do (whole byte pairs)     
+    }
+
+    i = fg + (fg<<4); // fill full byte with colour
+
+    // Don't both odd edges (if they existed) so now will the middle
+    for (j=0; j<h; j++) {
+        k = w / 2; // how many bytes wide is the middle?
+        RIA_ADDR0 = (y++ * 160) + ((x) >> 1);
+        RIA_STEP0 = 1; // moving sideways in fill
+
+        for (k; k>0; k--) { 
+            RIA_RW0 = i;
+        }
+    }
+}
+
 /**
  * drawLayout()
  * 
@@ -232,13 +296,13 @@ void drawLayout() {
 
     #define PEDX 8
     #define PEDY 20
-    #define PEDPW 5
-    #define PEDPH 5
+    #define PEDPW 4
+    #define PEDPH 4
     #define PEDGAP 1
     #define PIXW 32
     #define PIXH 32
-    #define PBOXW (PIXW * PEDPW) + ((PIXW-1) * PEDGAP) + (2*PEDGAP)
-    #define PBOXH (PIXH * PEDPH) + ((PIXH-1) * PEDGAP) + (2*PEDGAP)
+    #define PBOXW (PIXW * PEDPW) + ((PIXW-1) * PEDGAP) + (2*PEDGAP) +1
+    #define PBOXH (PIXH * PEDPH) + ((PIXH-1) * PEDGAP) + (2*PEDGAP) +1
 
     // bordering box
     fastline(PEDX, PEDY, PEDX+PBOXW, PEDY, FGCOL);
@@ -251,9 +315,13 @@ void drawLayout() {
 
     for (j=0; j<PIXH; j++) { // the rows
         for (k=0; k<PIXW; k++) { // the columns
-            setxyc(PEDX+1+PEDGAP+(k * PEDPW)+(k * PEDGAP), PEDY+1+PEDGAP+(j * PEDPH)+(j * PEDGAP), 1);
+            fbox(PEDX+1+PEDGAP+(k * PEDPW)+(k * PEDGAP), PEDY+1+PEDGAP+(j * PEDPH)+(j * PEDGAP), PEDPW, PEDPH, 8,0);
         }
     }
+
+
+
+    fbox(238,40,4,8,15,14);
 
     //render8x8(&console_font_8x8[40], 10, 10, 1, 1,7);
 }
